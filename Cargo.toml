@@ -2,10 +2,8 @@
 name = "spdm"
 version = "0.1.0"
 edition = "2021"
-authors = [
-    "lxyboy <lxyboy@hotmail.com>"
-]
-license = "Apache-2.0 or MIT"
+authors = ["lxyboy <lxyboy@hotmail.com>"]
+license = "Apache-2.0 OR MIT"
 
 [dependencies]
 
