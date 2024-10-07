@@ -62,7 +62,6 @@ pub fn get_version() {
         RequestResponseCode: todo!(),
         Param1: todo!(),
         Param2: todo!(),
-        Reserved: todo!(),
         VersionNumberEntryCount: todo!(),
         VersionNumberEntry1_n: todo!(),
     };

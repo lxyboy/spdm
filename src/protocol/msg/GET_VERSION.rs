@@ -1,4 +1,4 @@
-use super::{ErrorCode, RequestResponseCode};
+use super::{ErrorCode, RequestResponseCode, OFFSET};
 use crate::utils::{Bytes, Reader, Writer};
 
 pub struct GET_VERSION {
@@ -32,26 +32,32 @@ impl GET_VERSION {
 
 impl Bytes for GET_VERSION {
     fn from_bytes(&mut self, bytes: &[u8]) -> Result<usize, usize> {
-        let mut reader = Reader::init(bytes);
-        if reader.left() < 4 {
-            return Err(4);
+        let length = OFFSET::Param2 + 1;
+        if bytes.len() < length {
+            return Err(length);
         }
-        self.SPDMVersion = reader.read::<u8>().unwrap();
-        self.RequestResponseCode = reader.read::<u8>().unwrap();
-        self.Param1 = reader.read::<u8>().unwrap();
-        self.Param2 = reader.read::<u8>().unwrap();
-        Ok(reader.used())
+        let reader = Reader::init(bytes);
+        (self.SPDMVersion, _) = reader.read::<u8>(OFFSET::SPDMVersion).unwrap();
+        (self.RequestResponseCode, _) = reader.read::<u8>(OFFSET::RequestResponseCode).unwrap();
+        (self.Param1, _) = reader.read::<u8>(OFFSET::Param1).unwrap();
+        (self.Param2, _) = reader.read::<u8>(OFFSET::Param2).unwrap();
+        Ok(length)
     }
 
     fn to_bytes(&self, bytes: &mut [u8]) -> Result<usize, usize> {
-        let mut writer = Writer::init(bytes);
-        if writer.left() < 4 {
-            return Err(4);
+        let length = OFFSET::Param2 + 1;
+        if bytes.len() < length {
+            return Err(length);
         }
-        writer.write(self.SPDMVersion).unwrap();
-        writer.write(self.RequestResponseCode).unwrap();
-        writer.write(self.Param1).unwrap();
-        writer.write(self.Param2).unwrap();
-        Ok(writer.used())
+        let mut writer = Writer::init(bytes);
+        writer
+            .write(&self.SPDMVersion, OFFSET::SPDMVersion)
+            .unwrap();
+        writer
+            .write(&self.RequestResponseCode, OFFSET::RequestResponseCode)
+            .unwrap();
+        writer.write(&self.Param1, OFFSET::Param1).unwrap();
+        writer.write(&self.Param2, OFFSET::Param2).unwrap();
+        Ok(length)
     }
 }

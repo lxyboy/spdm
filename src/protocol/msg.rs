@@ -1,5 +1,12 @@
 use core::fmt::Display;
 
+pub mod OFFSET {
+    pub const SPDMVersion: usize = 0usize;
+    pub const RequestResponseCode: usize = 1usize;
+    pub const Param1: usize = 2usize;
+    pub const Param2: usize = 3usize;
+}
+
 #[repr(u8)]
 pub enum ErrorCode {
     InvalidRequest = 0x01,

@@ -11,74 +11,67 @@ pub trait Bytes: Sized {
 /// Read from a byte slice.
 pub struct Reader<'a> {
     buf: &'a [u8],
-    offset: usize,
 }
 impl<'a> Reader<'a> {
     pub fn init(bytes: &[u8]) -> Reader {
-        Reader {
-            buf: bytes,
-            offset: 0,
+        Reader { buf: bytes }
+    }
+
+    /// Return Ok((T, sizeof<T>))
+    /// Return Err(offset + sizeof<T>) overflow
+    pub fn read<T: Bytes + Default>(&self, offset: usize) -> Result<(T, usize), usize> {
+        if offset > self.buf.len() {
+            return Err(offset);
         }
-    }
-
-    pub fn left_slice(&self) -> &[u8] {
-        &self.buf[self.offset..]
-    }
-
-    pub fn used(&self) -> usize {
-        self.offset
-    }
-
-    pub fn left(&self) -> usize {
-        self.buf.len() - self.offset
+        let mut ret: T = T::default();
+        let length = ret
+            .from_bytes(&self.buf[offset..])
+            .map_err(|required_size| required_size + offset)?;
+        Ok((ret, length))
     }
 
     /// Return Ok(T)
-    /// Return Err(size) size is required
-    pub fn read<T: Bytes + Default>(&mut self) -> Result<T, usize> {
-        let mut ret: T = T::default();
-        let res = ret.from_bytes(self.left_slice())?;
-        self.offset += res;
-        Ok(ret)
+    /// Return Err(offset + n * sizeof<T>) overflow
+    pub fn read_n<T: Bytes + Copy + Default, const N: usize>(
+        &self,
+        offset: usize,
+        count: usize,
+    ) -> Result<([T; N], usize), usize> {
+        let mut ret = [T::default(); N];
+        let mut size = 0;
+        for index in 0..count {
+            size += ret[index]
+                .from_bytes(&self.buf[(offset + size)..])
+                .map_err(|required_size| required_size + offset + size)?;
+        }
+        Ok((ret, size))
     }
 }
 
 pub struct Writer<'a> {
     buf: &'a mut [u8],
-    offset: usize,
 }
 
 impl<'a> Writer<'a> {
     pub fn init(bytes: &mut [u8]) -> Writer {
-        Writer {
-            buf: bytes,
-            offset: 0,
-        }
+        Writer { buf: bytes }
     }
 
-    pub fn extend_from_slice(&mut self, value: &[u8]) -> Result<usize, usize> {
-        if self.left() < value.len() {
-            return Err(value.len());
+    pub fn write<T: Bytes>(&mut self, value: &T, offset: usize) -> Result<usize, usize> {
+        if offset > self.buf.len() {
+            return Err(offset);
         }
-        let added = value.len();
-        for (i, v) in value.iter().enumerate().take(added) {
-            self.buf[self.offset + i] = *v;
-        }
-        self.offset += added;
-        Ok(added)
-    }
-    fn mut_left_slice(&mut self) -> &mut [u8] {
-        &mut self.buf[self.offset..]
-    }
-    pub fn write<T: Bytes>(&mut self, value: T) -> Result<usize, usize> {
-        value.to_bytes(self.mut_left_slice())
-    }
-    pub fn left(&self) -> usize {
-        self.buf.len() - self.offset
+        value
+            .to_bytes(&mut self.buf[offset..])
+            .map_err(|required_size| required_size + offset)
     }
 
-    pub fn used(&self) -> usize {
-        self.offset
+    pub fn write_n<T: Bytes>(&mut self, value: &[T], offset: usize) -> Result<usize, usize> {
+        let mut nwrite = 0;
+        for v in value.iter() {
+            nwrite += self.write(v, offset + nwrite)?;
+        }
+        return Ok(nwrite);
     }
 }
 
